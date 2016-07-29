@@ -1,0 +1,5 @@
+name: DynamicTags
+description: Dynamically assign tags via a command, stored in a MySQL database.
+author: JoshK_
+version: 1.0
+main: eu.joshk.dynamictags.DynamicTags

@@ -1,0 +1,6 @@
+database:
+    ip: '127.0.0.1'
+    database: 'admin'
+    username: 'sql'
+    password: 'abc123'
+    port: 3306
