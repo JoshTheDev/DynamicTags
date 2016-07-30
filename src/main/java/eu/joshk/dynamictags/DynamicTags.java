@@ -1,8 +1,11 @@
 package eu.joshk.dynamictags;
 
+import eu.joshk.dynamictags.command.TagCommand;
+import eu.joshk.dynamictags.listener.PlayerListener;
+import eu.joshk.dynamictags.manager.DatabaseManager;
 import eu.joshk.dynamictags.manager.TagManager;
-import eu.joshk.dynamictags.util.SQLConnection;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -13,35 +16,67 @@ import java.io.File;
 public class DynamicTags extends JavaPlugin {
 
     private static DynamicTags instance;
+    private static final String STARTER = ChatColor.DARK_GRAY + "[" + ChatColor.DARK_AQUA + "DynamicTags" +
+            ChatColor.DARK_GRAY + "] " + ChatColor.GRAY;
 
-    private SQLConnection sqlConnection;
+    private DatabaseManager databaseManager;
     private TagManager tagManager;
 
     @Override
     public void onEnable() {
         instance = this;
 
-        if(!this.getDataFolder().exists() || !new File(this.getDataFolder(), "config.yml").exists()) {
+        if (!this.getDataFolder().exists() || !new File(this.getDataFolder(), "config.yml").exists()) {
             this.saveDefaultConfig();
             getLogger().info("It seems like you don't have a config file! We've copied one over for you, please modify it" +
                     " to reflect your database information then restart the server!");
             Bukkit.getPluginManager().disablePlugin(this);
             return;
         }
+        this.getConfig().options().copyDefaults(true);
 
-        setupConnection();
+        this.databaseManager = new DatabaseManager(10);
         this.tagManager = new TagManager();
+
+        registerListeners();
+        registerCommands();
     }
 
     @Override
     public void onDisable() {
-        getSQLConnection().disconnect();
+        if(getDatabaseManager() != null) {
+            // For when the plugin is stopped prematurely.
+            getDatabaseManager().finish();
+        }
 
         instance = null;
     }
 
     public static DynamicTags getInstance() {
         return instance;
+    }
+
+    /**
+     * Get formatted plugin message starter.
+     *
+     * @return chat starter.
+     */
+    public static String getStarter() {
+        return STARTER;
+    }
+
+    /**
+     * Register plugin listeners.
+     */
+    private void registerListeners() {
+        Bukkit.getPluginManager().registerEvents(new PlayerListener(), this);
+    }
+
+    /**
+     * Register plugin commands.
+     */
+    private void registerCommands() {
+        getCommand("tag").setExecutor(new TagCommand());
     }
 
     /**
@@ -55,21 +90,13 @@ public class DynamicTags extends JavaPlugin {
     }
 
     /**
-     * Get the current SQL connection.
+     * Get the database manager.
+     * This manager is responsible for scheduling all database updates / queries.
      *
-     * @return hopefully the SQL connection instance. If not loaded / something went wrong, null.
+     * @return database manager instance.
      */
-    public SQLConnection getSQLConnection() {
-        return sqlConnection;
-    }
-
-    /**
-     * Setup the database connection.
-     */
-    private void setupConnection() {
-        this.sqlConnection = new SQLConnection(getConfig().getString("database.ip"), getConfig().getString("database.database"),
-                getConfig().getString("database.username"), getConfig().getString("database.password"), getConfig().getInt("database.port"));
-        this.sqlConnection.connect();
+    public DatabaseManager getDatabaseManager() {
+        return databaseManager;
     }
 
 }
